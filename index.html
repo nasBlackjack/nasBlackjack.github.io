@@ -35,7 +35,7 @@
 				</div>
 
 				<div id="playButton">
-					<button id="start" onclick="showStart();">开始游戏</button>
+					<button id="start" onclick="showGame('startGame');">开始游戏</button>
 					<button id="search" onclick="showSearch();">查询信息</button>
 				</div>
 				<!--
@@ -63,7 +63,7 @@
 		var HttpRequest = require("nebulas").HttpRequest
 		var NebPay = require("nebpay");
 		var nebPay = new NebPay(); 
-		var contractAddress = "n1evepepdR4ZKxDXdPwgG9PZE3FHE652ze7";
+		var contractAddress = "n1kPCZCLB4VWqbFSUK1jWSWdwWpRtdRKytM";
 		var intervalQuery;
 
 		var neb = new Neb();
@@ -88,45 +88,27 @@
 		}
 		
 		function showGame(funcName) {
-			var value;
-			var isGoon = true;
-			if (funcName == 'startGame'){
-				value = document.getElementById("nasValue").value.trim();
-				if (value < 0.01 && value > 0) {
-					isGoon = false;
-				} else if (value == 0){
-					alert("只有重新进入游戏时，才能输入0，否则操作会失败！")
+			
+			document.getElementById("instruction").innerHTML = `
+				<h3>请到 浏览器插件 中完成操作</h3>`
+			//document.getElementById("idSearch").style.display = "none"
+			document.getElementById("playButton").innerHTML = `
+				<button id="start" onclick="showGame('startGame');">重新开始</button>
+				<button id="refresh" onclick="refresh();">游戏说明</button>`
+			var to = contractAddress;
+			var value = value; 
+			var callFunction = funcName;
+			var callArgs =  JSON.stringify([]);     
+			var options = {
+				listener: function (resp) {
+					intervalQuery = setInterval(function() {
+						scoreQuery(resp.txhash);
+					}, 5000);
 				}
-			} else {
-				value = '0';
 			}
-			if (value === "" ) {
-				alert('请先下注，才能继续游戏！');
-			} else if (isNaN(value)) {
-				alert("请填写正确的数字!");
-			} else if (!isGoon) {
-				alert("下注金额不能少于0.01NAS!");
-			} else {
-				document.getElementById("instruction").innerHTML = `
-					<h3>请到 浏览器插件 中完成操作</h3>`
-				//document.getElementById("idSearch").style.display = "none"
-				document.getElementById("playButton").innerHTML = `
-					<button id="start" onclick="showStart();">重新开始</button>
-					<button id="refresh" onclick="refresh();">游戏说明</button>`
-				var to = contractAddress;
-				var value = value; 
-				var callFunction = funcName;
-				var callArgs =  JSON.stringify([]);     
-				var options = {
-					listener: function (resp) {
-						intervalQuery = setInterval(function() {
-							scoreQuery(resp.txhash);
-						}, 5000);
-					}
-				}
-				nebPay.call(to, value, callFunction, callArgs, options);
+			nebPay.call(to, value, callFunction, callArgs, options);
 				
-			}	
+				
 		}
 
 		function scoreQuery(txhash) {
@@ -153,7 +135,6 @@
 							if (gameStatus == 1){
 								var id = result.id;
 								var score = result.score;
-								var value = result.value;
 								//document.getElementById("gameId").style.display = "none";
 								//document.getElementById("idSearch").style.display = "inline"
 								document.getElementById("instruction").innerHTML = `
@@ -161,44 +142,27 @@
 										<p>本轮游戏ID为${id}，游戏还未结束</p>
 										<p>您已停牌并成为庄家，请等待或者邀请下一位玩家！</p>
 										<p>您的牌点数:${score}（其他玩家无法查看）</p>
-										<p>您的下注金额为:${value}NAS</p>
 										<p>您可以根据游戏ID查看本轮游戏详情</p>
 									</div>`
 								document.getElementById("playButton").innerHTML = `
-									<button id="start" onclick="showStart();">再玩一轮！</button>
+									<button id="start" onclick="showGame('startGame');">再玩一轮！</button>
 									<button id="search" onclick="showSearch();">查询信息</button>`
 							
 							} else if (gameStatus == 2){
 								var id = result.id;
 								var win = result.win;
 								var score = result.score;
-								var value = result.value;
-								var value1 = result.value1;
-								var value2 = result.value2;
-								var nextValue = result.nextValue;
 								var score2 = result.score2;
 								var bonus = result.bonus;
-								var nextId = result.nextID;
-
-								var nextWord;
-								if (nextValue == 0){
-									nextWord = `<p>由于您的下注已用完，您的游戏已结束，可重新开始！</p>
-												<p>下一轮游戏ID为${nextId}.</p>`;
-								} else {
-									nextWord = `<p>由于您的下注多于对手，您将以当前牌点数成为下一轮庄家!</p>
-												<p>下一轮游戏ID为${nextId}, 下一轮下注为${nextValue}</p>`;
-								}
 								
 								if (win){
 									document.getElementById("instruction").innerHTML = `
 										<div class="win">		
 											<p>本轮游戏ID为${id}，游戏已结束</p>
 											<p>恭喜您，您赢了</p>
-											<p>您的牌点数为:${score}, 下注为${value1}NAS</p>
-											<p>对方牌点数为:${score2}, 下注为${value2}NAS</p>
-											<p>您本轮所赢金额为${value}NAS(本金+赢金)</p>
+											<p>您的牌点数为:${score}</p>
+											<p>对方牌点数为:${score2}</p>
 											<p>您本轮获得游戏奖励为${bonus}NAS,(24小时之内只能获得一次游戏奖励)</p>
-											${nextWord}
 											<p>您可以根据本轮游戏ID[${id}]查看本轮比赛详情</p>
 										</div>`
 							} else {
@@ -206,11 +170,9 @@
 									<div class="win">		
 										<p>本轮游戏ID为${id}，游戏已结束</p>
 										<p>很遗憾，您输了</p>
-										<p>您的牌点数为:${score}, 下注为${value1}NAS</p>
-										<p>对方牌点数为:${score2}, 下注为${value2}NAS</p>
-										<p>您本轮所输金额为${value/2}NAS</p>
-										<p>您本轮获得游戏奖励为${bonus}NAS(24小时之内只能获得一次游戏奖励)</p>
-										${nextWord}
+										<p>您的牌点数为:${score}</p>
+										<p>对方牌点数为:${score2}</p>
+										<p>您本轮没有获得奖励，再完一轮吧！</p>
 										<p>您可以根据本轮游戏ID[${id}]查看本轮比赛详情</p>
 									</div>`
 							}
@@ -266,7 +228,6 @@
 						if (gameStatus == 1){
 							var id = result.id;
 							var score = result.score;
-							var value = result.value;
 							//document.getElementById("gameId").style.display = "none";
 							//document.getElementById("idSearch").style.display = "inline"
 							document.getElementById("instruction").innerHTML = `
@@ -274,63 +235,43 @@
 									<p>本轮游戏ID为${id}，游戏还未结束</p>
 									<p>您已停牌并成为庄家，请等待或者邀请下一位玩家！</p>
 									<p>您的牌点数:${score}（其他玩家无法查看）</p>
-									<p>您的下注金额为:${value}NAS</p>
 									<p>您可以根据游戏ID查看本轮游戏详情</p>
 								</div>`
 							document.getElementById("playButton").innerHTML = `
-								<button id="start" onclick="showStart();">再玩一轮！</button>
+								<button id="start" onclick="showGame('startGame');">再玩一轮！</button>
 								<button id="search" onclick="showSearch();">查询信息</button>`
-						
 						} else if (gameStatus == 2){
 							var id = result.id;
 							var win = result.win;
 							var score = result.score;
-							var value = result.value;
-							var value1 = result.value1;
-							var value2 = result.value2;
-							var nextValue = result.nextValue;
 							var score2 = result.score2;
 							var bonus = result.bonus;
-							var nextId = result.nextID;
-
-							var nextWord;
-							if (nextValue == 0){
-								nextWord = `<p>由于您的下注已用完，您的游戏已结束，可重新开始！</p>
-											<p>下一轮游戏ID为${nextId}.</p>`;
-							} else {
-								nextWord = `<p>由于您的下注多于对手，您将以当前牌点数成为下一轮庄家!</p>
-											<p>下一轮游戏ID为${nextId}, 下一轮下注为${nextValue}</p>`;
-							}
 							
 							if (win){
 								document.getElementById("instruction").innerHTML = `
-									<div class="win">		
-										<p>本轮游戏ID为${id}，游戏已结束</p>
-										<p>恭喜您，您赢了</p>
-										<p>您的牌点数为:${score}, 下注为${value1}NAS</p>
-										<p>对方牌点数为:${score2}, 下注为${value2}NAS</p>
-										<p>您本轮所赢金额为${value}NAS(本金+赢金)</p>
-										<p>您本轮获得游戏奖励为${bonus}NAS,(24小时之内只能获得一次游戏奖励)</p>
-										${nextWord}
-										<p>您可以根据本轮游戏ID[${id}]查看本轮比赛详情</p>
-									</div>`
+										<div class="win">		
+											<p>本轮游戏ID为${id}，游戏已结束</p>
+											<p>恭喜您，您赢了</p>
+											<p>您的牌点数为:${score}</p>
+											<p>对方牌点数为:${score2}</p>
+											<p>您本轮获得游戏奖励为${bonus}NAS,(24小时之内只能获得一次游戏奖励)</p>
+											<p>您可以根据本轮游戏ID[${id}]查看本轮比赛详情</p>
+										</div>`
 								document.getElementById("playButton").innerHTML = `
-									<button id="start" onclick="showStart();">再玩一轮！</button>
+									<button id="start" onclick="showGame('startGame');">再玩一轮！</button>
 									<button id="search" onclick="showSearch();">查询信息</button>`
 							} else {
 								document.getElementById("instruction").innerHTML = `
 									<div class="win">		
 										<p>本轮游戏ID为${id}，游戏已结束</p>
 										<p>很遗憾，您输了</p>
-										<p>您的牌点数为:${score}, 下注为${value1}NAS</p>
-										<p>对方牌点数为:${score2}, 下注为${value2}NAS</p>
-										<p>您本轮所输金额为${value/2}NAS</p>
-										<p>您本轮获得游戏奖励为${bonus}NAS(24小时之内只能获得一次游戏奖励)</p>
-										${nextWord}
+										<p>您的牌点数为:${score}</p>
+										<p>对方牌点数为:${score2}</p>
+										<p>您本轮没有获得奖励，再完一轮吧！</p>
 										<p>您可以根据本轮游戏ID[${id}]查看本轮比赛详情</p>
 									</div>`
 								document.getElementById("playButton").innerHTML = `
-									<button id="start" onclick="showStart();">再玩一轮！</button>
+									<button id="start" onclick="showGame('startGame');">再玩一轮！</button>
 									<button id="search" onclick="showSearch();">查询信息</button>`
 							}
 						}
@@ -398,14 +339,12 @@
 								<p>当前游戏ID内还没有玩家！</p>`
 						} else if(status == 1) {
 							var player = result.player1;
-							var value = result.value1;
 							var score = result.score1;
 							document.getElementById("instruction").innerHTML = `
 								<div class="win">		
 									<p>本轮游戏ID为${id}，游戏还未结束</p>
 									<p>您已停牌并成为庄家，请等待或者邀请下一位玩家！</p>
 									<p>您的地址为:${player}</p>
-									<p>您的下注金额为:${value}NAS</p>
 									<p>您的牌点数:${score}（其他玩家无法查看）</p>
 									<p>快来邀请其他玩家一起来玩吧</p>
 								</div>`
@@ -419,9 +358,6 @@
 							var score2 = result.score2;
 							var bonus2 = result.bonus2;
 							var win = result.win;
-							var winValue = result.winValue;
-							var nextId = result.nextID;
-							var nextValue = result.nextValue;
 							var winWord;
 							var nextWord;
 							if (win == 1){
@@ -431,23 +367,15 @@
 							} else {
 								winWord = "您没有参与此轮游戏！"
 							}
-							if (nextValue == 0){
-								nextWord = `<p>下一轮游戏ID为${nextId}</p>`
-							} else {
-								nextWord = `<p>由于您的下注金额多于对手，您以本轮牌面成为了下一轮庄家</p>
-											<p>下一轮游戏ID为${nextId}，您的下一轮下注为${nextValue}NAS</p>`
-							}
 							document.getElementById("instruction").innerHTML = `
 								<div class="win">		
 									<p>本轮游戏ID为${id}，游戏已结束</p>
 									<p>${winWord}</p>
-									<p>本轮游戏下注额为${winValue/2}nas,游戏详情:</p>
+									<p>本轮游戏详情:</p>
 									<p>玩家1地址:${player1}</p>
 									<p>玩家1牌点数:${score1}, 游戏奖金:${bonus1}NAS</p>
 									<p>玩家2地址:${player2}</p>
 									<p>玩家2牌点数:${score2}, 游戏奖金:${bonus2}NAS</p>
-									<p>本局胜利者共获得赢得${winValue}NAS(本金+赢金)</p>
-									${nextWord}
 								</div>`
 						}
 					} else {
@@ -483,10 +411,12 @@
 					args: JSON.stringify([]),
 				}
 			}).then(function (resp) {
-				var data = JSON.parse(resp.result);
+				var result = JSON.parse(resp.result);
+				var bonus = result.bonus;
+				var roundBonus = result.roundBonus;
 				document.getElementById("instruction").innerHTML = `
-				<p>游戏奖金总额为:${data/1e18}NAS</p>
-				<p>您玩一轮游戏可以获得游戏奖金总额的5%(每24小时只能获得一次)</p>`
+				<p>游戏奖金总额为:${bonus/1e18}NAS</p>
+				<p>您赢得一轮游戏可以获得游戏奖金额为${roundBonus/1e18}(每24小时只能获得一次)</p>`
 			}).catch(function(err) {
 				console.log(err);
 			})
@@ -503,7 +433,7 @@
 			</div>`
 			//<input class="value" id="nasValue" type="text" placeholder="请输入下注金额金额">`
 			document.getElementById("playButton").innerHTML = `
-				<button id="start" onclick="showStart();">开始游戏</button>
+				<button id="start" onclick="showGame('startGame');">开始游戏</button>
 				<button id="refresh" onclick="showSearch();">继续查询</button>`
 		}
 		
